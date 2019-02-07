@@ -32,6 +32,8 @@ def solve_least_squre(W,y):
 
 def points3D_to_2D(points3D,center,rot_M,cam_to_img):
     points2D = []
+    if center is None:
+        return np.zeros((8,2))
     for point3D in points3D:
         point3D = point3D.reshape((-1,1))
         point = center + np.dot(rot_M, point3D)
@@ -80,21 +82,20 @@ def compute_center(points3D,rot_M,cam_to_img,box_2D,inds):
     return center
 
 
-def draw_3D_box(image,points):
+def draw_3D_box(image,points, thickness=7):
     points = points.astype(np.int)
-
     for i in range(4):
         point_1_ = points[2 * i]
         point_2_ = points[2 * i + 1]
-        cv2.line(image, (point_1_[0], point_1_[1]), (point_2_[0], point_2_[1]), (0, 255, 0), 2)
+        cv2.line(image, (point_1_[0], point_1_[1]), (point_2_[0], point_2_[1]), (0, 255, 0), thickness)
 
-    cv2.line(image,tuple(points[0]),tuple(points[7]),(0, 0, 255), 2)
-    cv2.line(image, tuple(points[1]), tuple(points[6]), (0, 0, 255), 2)
+    cv2.line(image,tuple(points[0]),tuple(points[7]),(0, 0, 255), thickness)
+    cv2.line(image, tuple(points[1]), tuple(points[6]), (0, 0, 255), thickness)
 
     for i in range(8):
         point_1_ = points[i]
         point_2_ = points[(i + 2) % 8]
-        cv2.line(image, (point_1_[0], point_1_[1]), (point_2_[0], point_2_[1]), (0, 255, 0), 2)
+        cv2.line(image, (point_1_[0], point_1_[1]), (point_2_[0], point_2_[1]), (0, 255, 0), thickness)
 
 
 def draw_2D_box(image,points):
@@ -102,18 +103,24 @@ def draw_2D_box(image,points):
     cv2.rectangle(image,tuple(points[0:2]),tuple(points[2:4]),(0, 255, 0), 2)
 
 
-def gen_3D_box(yaw,dims,cam_to_img,box_2D):
-    dims = dims.reshape((-1,1))
-    box_2D = box_2D.reshape((-1,1))
-    points3D = init_points3D(dims)
+def gen_3D_box(yaw, dims, cam_to_img, box_2d, roll=0, pitch=0):
+    dims = dims.reshape((-1, 1))
+    box_2d = box_2d.reshape((-1, 1))
+    points3d = init_points3D(dims)
 
-    rot_M = np.asarray([[np.cos(yaw), 0, np.sin(yaw)], [0, 1, 0], [-np.sin(yaw), 0, np.cos(yaw)]])
+    roll = 0 * (np.pi/180)
+    pitch = 0 * (np.pi/180)
 
-    center = compute_center(points3D, rot_M, cam_to_img, box_2D, inds)
+    rot_m_y = np.asarray([[np.cos(yaw), 0, np.sin(yaw)], [0, 1, 0], [-np.sin(yaw), 0, np.cos(yaw)]])
+    rot_m_r = np.asarray([[1, 0, 0], [0, np.cos(roll), -np.sin(roll)], [0, np.sin(roll), np.cos(roll)]])
+    rot_m_p = np.asarray([[np.cos(roll), -np.sin(pitch), 0], [np.sin(pitch), np.cos(pitch), 0], [0, 0, 1]])
+    rot_m = np.dot(rot_m_p, rot_m_y, rot_m_r)
 
-    points2D = points3D_to_2D(points3D, center, rot_M, cam_to_img)
+    center = compute_center(points3d, rot_m, cam_to_img, box_2d, inds)
+    
+    points2d = points3D_to_2D(points3d, center, rot_m, cam_to_img)
 
-    return points2D
+    return points2d, center
 
 
 
